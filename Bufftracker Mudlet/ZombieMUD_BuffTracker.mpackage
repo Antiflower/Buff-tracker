@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+  <AliasPackage>
+    <AliasGroup isActive="yes" isFolder="yes">
+      <name>ZombieMUD BuffTracker - Aliases</name>
+      <packageName></packageName>
+      <script></script>
+      <regexCodeList />
+      <regexCodePropertyList />
+      <Alias isActive="yes" isFolder="no">
+        <name>buffs</name>
+        <packageName></packageName>
+        <script>OnBuffStatus()</script>
+        <command></command>
+        <regex>^buffs$</regex>
+      </Alias>
+    </AliasGroup>
+  </AliasPackage>
+  <ScriptPackage>
+    <ScriptGroup isActive="yes" isFolder="yes">
+      <name>ZombieMUD BuffTracker - Core</name>
+      <packageName></packageName>
+      <script>-- Enhanced buff tracker for ZombieMUD with uptime tracking
+-- Version 2.1 - Mudlet Edition
+
+buffDetails = {
+    ["stoneskin"] = {maxStacks = 2, apply = "Granite plates form over your skin.", fade = "Your stoneskin crumbles and drops off."},
+    ["SOP"] = {maxStacks = 2, apply = "You form a barrier of repulsive magic around yourself.", fade = "Your protection spell wears off."},
+    ["Dis"] = {maxStacks = 2, apply = "You displace .+'s image%.", fade = "Your displacement wears off.", regex = true},
+    ["Sspirit"] = {maxStacks = 1, apply = "You open your eyes with new?found confidence.", fade = "The teachings of your ancestors fade from your mind as the aches and", regex = true},
+    ["Smwalk"] = {maxStacks = 1, apply = "You start walking magically.", fade = "Your magical walking wears off."},
+    ["Lion Heart"] = {maxStacks = 1, apply = "Your heart is that of a Lion!", fade = "The Courage of the Lion leaves you."},
+    ["MUP"] = {maxStacks = 1, apply = "You feel more sturdy.", fade = "You feel a little like crap."},
+    ["Regen"] = {maxStacks = 1, apply = "You feel your metabolism speed up.", fade = "Your metabolism slows back down."},
+    ["AOG"] = {maxStacks = 1, apply = "A shining .+ of glowing silver .+ surrounds you%.", fade = "The Armour of God surrounding you fades away.", regex = true},
+    ["Brill"] = {maxStacks = 1, apply = "You feel enlightened as your innate brilliance awakens.", fade = "You feel your innate brilliance diminish."},
+    ["EoM"] = {maxStacks = 1, apply = "Your eyes flash in silky colours.", fade = "You feel a pinch in your eyes."},
+    ["IP"] = {maxStacks = 1, apply = "You feel inner .+ increasing.", fade = "You feel your inner power decreasing.", regex = true},
+    ["SR"] = {maxStacks = 1, apply = "Kyte wobbles around a bit.", fade = "Your stun resistance wears off.", regex = true},
+    ["HBarrier"] = {maxStacks = 1, apply = "You feel enveloped in harmony.", fade = "You are no longer enveloped in harmony."},
+    ["Flight"] = {maxStacks = 1, apply = "You become lighter than the air, wow you feel like you could fly!", fade = "You feel a bit heavier."},
+    ["Hprep"] = {maxStacks = 1, apply = "You feel like you might be ready for harmony.", fade = "You feel less prepared for harmony."},
+    ["Harmour"] = {maxStacks = 1, apply = "You feel in complete harmony.", fade = "You no longer feel harmonious."},
+    ["Mbarrier"] = {maxStacks = 1, apply = "You feel as if a protective barrier surrounds your fragile mind.", fade = "You feel a slight tingle somewhere deep inside your mind."},
+    ["TUP"] = {maxStacks = 1, apply = "You feel like you could carry the world.", fade = "You feel like crap."},
+    ["BUP"] = {maxStacks = 1, apply = "Your brain feels bigger.", fade = "Your brain feels smaller."},
+    ["CFT"] = {maxStacks = 1, apply = "Suddenly your body flashes bright white inviting the lightning to strike at your knuckles.", fade = "Your body doesnt seem to sizzle anymore"},
+    ["CFF"] = {maxStacks = 1, apply = "Suddenly bright flames burst out from your toes and flash over your body ending up into your knuckles.", fade = "The flames around you grow weaker and disappear"},
+    ["CFI"] = {maxStacks = 1, apply = "Suddenly your eyes freeze into two clear blocks of ice for a moment before they slide away down your arms into your knuckles.", fade = "You feel your body temperature rise back as ice melts"},
+    ["ADREN"] = {maxStacks = 1, apply = "You are bursting with energy!!!", fade = "Exhaustion washes over you as the adrenaline begins to leave your bloodstream%.%.", regex = true},
+    ["CT"] = {maxStacks = 1, apply = "Your movements are now more focused and your mind is calm.", fade = "You lose your concentration and fight with less precision."},
+    ["EH"] = {maxStacks = 1, apply = "With a flash a shining hauberk of pure energy encases you%.", fade = "The energy surrounding your body dwindles away.", regex = true},
+    ["Blur"] = {maxStacks = 1, apply = "You enchant the air around you, blurring your outlines.", fade = "Your blur wears off."},
+    ["Amorphic"] = {maxStacks = 2, apply = ".+ casts a protective spell on .+%.", fade = "Your Amorphic Armour spell wears off.", regex = true},
+    ["IronWill"] = {maxStacks = 1, apply = ".+ stares? deep into your eyes, bolstering your concentration greatly%.", apply_alt = "You turn your mind inwards, enchanting yourself with an aura of rigid concentration.", fade = "Your Iron Will wears off.", regex = true},
+    ["ForceShield"] = {maxStacks = 1, apply = ".+ surrounds you with a telekinetic shield of force%.", fade = "The force shield dissipates.", regex = true},
+    ["GACID"] = {maxStacks = 1, apply = "You clench your fist and manipulate the air around you.", fade = "The tickling adhesive fluid on your skin disappears.", regex = true},
+    ["LACID"] = {maxStacks = 1, apply = "turning the water into a neutralizing adhesive fluid", fade = "The neutralizing adhesive fluid on your skin disappears."},
+    ["GASPHYX"] = {maxStacks = 1, apply = "You inhale hard and a gust of wind blows against your face, ", fade = "You gasp for air as a choking feeling passes over you.", regex = true},
+    ["LASPHYX"] = {maxStacks = 1, apply = "You breathe in and a light breeze brushes against your", fade = "You have trouble breathing for a moment.", regex = true},
+    ["GCOLD"] = {maxStacks = 1, apply = "A beam of torrid energy lashes out from your outstretched hand,", fade = "A great chill washes over you as the magical warmth leaves you.", regex = true},
+    ["LCOLD"] = {maxStacks = 1, apply = "A ray of fiery energy launches from your outstretched hand,", fade = "You feel cold and exposed as the magical warmth leaves you.", regex = true},
+    ["GELEC"] = {maxStacks = 1, apply = "With a strong pulling motion of your outstreched hands an", fade = "The world flashes around you and with a quick spasm the magic in your body disappears.", regex = true},
+    ["LELEC"] = {maxStacks = 1, apply = "With a withdrawing motion of your outstreched hands a", fade = "Your surroundings flash and with a shiver the magic in your body disappears.", regex = true},
+    ["GFIRE"] = {maxStacks = 1, apply = "You draw a circle in the air and a brilliant halo of cold blue", fade = "The freezing grip of winter disappears and you feel comfortably warm again.", regex = true},
+    ["LFIRE"] = {maxStacks = 1, apply = "You trace a circle in the air and a shining circumference of blue", fade = "The chill in your bones is gone and you feel comfortably warm again.", regex = true},
+    ["GMAGIC"] = {maxStacks = 1, apply = "You point your index finger forward, and an effulgent", fade = "The swirling shell of effulgent magic around you vanishes.", regex = true},
+    ["LMAGIC"] = {maxStacks = 1, apply = "of mystic light is unleashed. The magic swirls around you,", fade = "The whirlwind of protective magic around you vanishes.", regex = true},
+    ["GPOISON"] = {maxStacks = 1, apply = "Envisaging the arteries, you inject yourself with an arcane.", fade = "The blazing fervor in your veins is gone.", regex = true},
+    ["LPOISON"] = {maxStacks = 1, apply = "Envisaging the arteries, you inject yourself with a mystic", fade = "The warmth in your veins is gone.", regex = true},
+    ["GPSI"] = {maxStacks = 1, apply = "You place your hand on your forehead and a soothing barrier forms.", fade = "The soothing void around your soul is no more.", regex = true},
+    ["LPSI"] = {maxStacks = 1, apply = "You tap yourself lightly on the forehead and a relaxing shelter", fade = "The relaxing emptiness in your mind is no more.", regex = true},
+    ["GPHYS"] = {maxStacks = 1, apply = ".+ regards you with a focused look in its eyes and the air around", apply_alt = "The air around you starts to waver vigorously.", fade = "The air around you is calm once more as the wavering stops.", regex = true},
+    ["LPHYS"] = {maxStacks = 1, apply = "magic around you. The air around you starts to ripple.", fade = "The air around you is calm once more as the rippling stops.", regex = true},
+    ["Lsphere"] = {maxStacks = 1, apply = "A faint shimmering sphere of .+ protection envelops you", fade = "Your lesser protective sphere against .+ damage vanishes.", regex = true},
+    ["Gsphere"] = {maxStacks = 1, apply = "A shimmering sphere of .+ protection envelops you", fade = "Your greater protective sphere against .+ damage vanishes.", regex = true},
+    ["Berserk"] = {maxStacks = 1, apply = "You bellow in rage and you must kill!", fade = "You come out of your berserk!"},
+    ["Infra"] = {maxStacks = 1, apply = "You feel like you can see in the dark.", fade = "Your vision is a bit less red."},
+    ["WolfEyes"] = {maxStacks = 1, apply = "Your eyes gleam yellow and your night vision improves.", fade = "Your yellow wolf eyes turn back to normal."},
+    ["Light"] = {maxStacks = 1, apply = "You summon a magical ball of light.", fade = "The light spell wears off."},
+    ["HealSmoke"] = {maxStacks = 1, apply = "You breathe out a billowy cloud of harmonious smoke.", fade = "Your healing smoke disperses."},
+    ["WallSteel"] = {maxStacks = 1, apply = "You lift up your shield.", fade = "Your hand starts to ache, forcing you to lower your shield."},
+    ["Barkskin"] = {maxStacks = 2, apply = "Your skin turns green and fissures, thickening into a layer of tough bark.", fade = "Your barkskin wears off."},
+    ["WaterBreath"] = {maxStacks = 1, apply = ".+ puts? a protective blue aura around your head%.", fade = "You are no longer able to breathe underwater.", regex = true},
+    ["WaterWalk"] = {maxStacks = 1, apply = ".+ looks a bit different%.", fade = "You feel heavy.", regex = true},
+    ["Invis"] = {maxStacks = 1, apply = "You turn invisible[%.!]", fade = "You turn visible again.", regex = true},
+    ["Transform"] = {maxStacks = 1, apply = "You shriek in pain as your entire body begins to transform!", fade = "With a violent convulsion, you return to your normal form."},
+    ["Blind"] = {maxStacks = 1, apply = ".+ blinds you%.", fade = "You are able to see again.", regex = true},
+    ["Slow"] = {maxStacks = 1, apply = "You feel like lagged.", fade = "You no longer feel lagged."},
+    ["Glue"] = {maxStacks = 1, apply = "Your feet are covered with slimy matter.", fade = "You can move again."},
+    ["SeeMagic"] = {maxStacks = 1, apply = "Your vision seems more sensitive.", fade = "Your vision feels less sensitive."},
+    ["ShadowShield"] = {maxStacks = 1, apply = ".+ draws? a protective circle in the air .+ shadows", fade = "The shadows lift from your body.", regex = true},
+    ["Kamikaze"] = {maxStacks = 1, apply = "You start your Kamikaze attack!", fade = "You calm down."},
+    ["Forget"] = {maxStacks = 1, apply = "You feel stoopid.", fade = "For some reason or another%.%. you feel smarter.", regex = true},
+    ["MindDev"] = {maxStacks = 1, apply = "You feel smart.", fade = "You feel stupid."},
+    ["Enlighten"] = {maxStacks = 1, apply = "You feel wiser.", fade = "You feel less wise."},
+    ["HolyWisdom"] = {maxStacks = 1, apply = "You feel wiser as holy wisdom expands your mind.", fade = "You feel the wisdom leaving you."},
+    ["MindLink"] = {maxStacks = 1, apply = "You think that you're not alone in your head.", fade = "You feel alone in your head again."},
+    ["ResistHeal"] = {maxStacks = 1, apply = "You feel weird.", fade = "You feel normal again."},
+    ["SpiritNature"] = {maxStacks = 1, apply = "You feel .+ as .+ as the spirit of the .+ strenghtens you!", fade = "You suddenly feel cold as the presence leaves your body.", regex = true},
+    ["ViscousFlesh"] = {maxStacks = 1, apply = "You concentrate on your body, and its composition is revealed to your", fade = "The viscous black substance is absorbed by your skin, and so it disappears."},
+}
+
+buffStacks = buffStacks or {}
+buffStartTime = buffStartTime or {}
+
+function FormatUptime(seconds)
+    if seconds &lt; 60 then
+        return string.format("%ds", seconds)
+    elseif seconds &lt; 3600 then
+        return string.format("%dm%ds", math.floor(seconds / 60), seconds % 60)
+    else
+        return string.format("%dh%dm", math.floor(seconds / 3600), math.floor((seconds % 3600) / 60))
+    end
+end
+
+function OnBuffGain(name)
+    local maxStacks = buffDetails[name].maxStacks
+    if buffStacks[name] &lt; maxStacks then
+        buffStacks[name] = buffStacks[name] + 1
+        table.insert(buffStartTime[name], os.time())
+        if maxStacks &gt; 1 then
+            send("party say " .. name .. " up! Current stacks: " .. buffStacks[name])
+        else
+            send("party say " .. name .. " up!")
+        end
+    elseif maxStacks &gt; 1 then
+        send("party say " .. name .. " is at max stacks: " .. maxStacks)
+    end
+end
+
+function OnBuffLoss(name)
+    local maxStacks = buffDetails[name].maxStacks
+    if buffStacks[name] and buffStacks[name] &gt; 0 then
+        local startTime = table.remove(buffStartTime[name], 1)
+        local uptime = os.time() - startTime
+        buffStacks[name] = buffStacks[name] - 1
+        if maxStacks &gt; 1 then
+            send("party say " .. name .. " lost. Stacks: " .. buffStacks[name] .. " | Was up: " .. FormatUptime(uptime))
+        else
+            send("party say " .. name .. " lost. Was up: " .. FormatUptime(uptime))
+        end
+    else
+        send("party say " .. name .. " is not active.")
+    end
+end
+
+function OnBuffStatus()
+    local activeBuffs = {}
+    for name, stacks in pairs(buffStacks) do
+        if stacks &gt; 0 then
+            local maxStacks = buffDetails[name].maxStacks
+            local uptimeStr = ""
+            if buffStartTime[name] and #buffStartTime[name] &gt; 0 then
+                uptimeStr = "(" .. FormatUptime(os.time() - buffStartTime[name][1]) .. ")"
+            end
+            if maxStacks &gt; 1 then
+                table.insert(activeBuffs, name .. ":" .. stacks .. "/" .. maxStacks .. uptimeStr)
+            else
+                table.insert(activeBuffs, name .. uptimeStr)
+            end
+        end
+    end
+    if #activeBuffs &gt; 0 then
+        send("party say Buffs: " .. table.concat(activeBuffs, " | "))
+    else
+        send("party say No active buffs.")
+    end
+end
+
+-- Initialize buff tracking
+for name, buff in pairs(buffDetails) do
+    buffStacks[name] = 0
+    buffStartTime[name] = {}
+end
+
+-- Create triggers dynamically
+for name, buff in pairs(buffDetails) do
+    local isRegex = buff.regex or false
+    if isRegex then
+        permRegexTrigger("BuffGain_" .. name, "", {buff.apply}, [[OnBuffGain("]] .. name .. [[")]])
+        if buff.apply_alt then
+            permRegexTrigger("BuffGainAlt_" .. name, "", {buff.apply_alt}, [[OnBuffGain("]] .. name .. [[")]])
+        end
+        permRegexTrigger("BuffLoss_" .. name, "", {buff.fade}, [[OnBuffLoss("]] .. name .. [[")]])
+    else
+        permSubstringTrigger("BuffGain_" .. name, "", {buff.apply}, [[OnBuffGain("]] .. name .. [[")]])
+        if buff.apply_alt then
+            permSubstringTrigger("BuffGainAlt_" .. name, "", {buff.apply_alt}, [[OnBuffGain("]] .. name .. [[")]])
+        end
+        permSubstringTrigger("BuffLoss_" .. name, "", {buff.fade}, [[OnBuffLoss("]] .. name .. [[")]])
+    end
+end
+
+cecho("&lt;green&gt;Enhanced BuffTracker v2.1 loaded!\n")
+send("party say Enhanced BuffTracker v2.1 loaded - no single-stack spam!")
