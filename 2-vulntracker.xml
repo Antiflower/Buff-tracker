@@ -1,0 +1,313 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE muclient>
+<muclient>
+<plugin
+   name="Vulnerability_Timer_Manager"
+   author="YourName"
+   id="a1b2c3d4e5f6a7b8c9d0e1f2"
+   language="Lua"
+   purpose="Manages vulnerability timers and cancels them on creature death"
+   save_state="y"
+   date_written="2025-10-02"
+   requires="4.00"
+   version="1.1"
+   >
+<description trim="y">
+<![CDATA[
+This plugin manages vulnerability spell timers and automatically cancels them when creatures die.
+Also tracks combat rounds properly.
+
+Features:
+- Tracks combat rounds from round start
+- Announces vulnerability up/down to party
+- Cancels timers on creature death
+- Displays total rounds when combat ends
+]]>
+</description>
+
+</plugin>
+
+<!-- Vulnerability Triggers -->
+<triggers>
+  <trigger
+   custom_colour="14"
+   enabled="y"
+   group="Vuln"
+   match="You utter the magic words 'afflictus corpus'"
+   send_to="12"
+   sequence="100"
+   script="StartVuln"
+  >
+  </trigger>
+  
+  <trigger
+   custom_colour="14"
+   enabled="y"
+   group="Vuln"
+   match="You utter the magic words 'ardens amictus'"
+   send_to="12"
+   sequence="100"
+   script="StartVuln"
+  >
+  </trigger>
+  
+  <trigger
+   custom_colour="14"
+   enabled="y"
+   group="Vuln"
+   match="You utter the magic words 'aufero fervens'"
+   send_to="12"
+   sequence="100"
+   script="StartVuln"
+  >
+  </trigger>
+  
+  <trigger
+   custom_colour="14"
+   enabled="y"
+   group="Vuln"
+   match="You utter the magic words 'fulmen infractus'"
+   send_to="12"
+   sequence="100"
+   script="StartVuln"
+  >
+  </trigger>
+  
+  <trigger
+   custom_colour="14"
+   enabled="y"
+   group="Vuln"
+   match="You utter the magic words 'ignavus animus'"
+   send_to="12"
+   sequence="100"
+   script="StartVuln"
+  >
+  </trigger>
+  
+  <trigger
+   custom_colour="14"
+   enabled="y"
+   group="Vuln"
+   match="You utter the magic words 'infirmus respiro'"
+   send_to="12"
+   sequence="100"
+   script="StartVuln"
+  >
+  </trigger>
+  
+  <trigger
+   custom_colour="14"
+   enabled="y"
+   group="Vuln"
+   match="You utter the magic words 'macilentus corium'"
+   send_to="12"
+   sequence="100"
+   script="StartVuln"
+  >
+  </trigger>
+  
+  <trigger
+   custom_colour="14"
+   enabled="y"
+   group="Vuln"
+   match="You utter the magic words 'macula valetudo'"
+   send_to="12"
+   sequence="100"
+   script="StartVuln"
+  >
+  </trigger>
+  
+  <trigger
+   custom_colour="14"
+   enabled="y"
+   group="Vuln"
+   match="You utter the magic words 'magus foramen'"
+   send_to="12"
+   sequence="100"
+   script="StartVuln"
+  >
+  </trigger>
+
+  <!-- Round Counter Triggers -->
+  <trigger
+   name="RoundStart"
+   group="RoundCounter"
+   match="*NEW ROUND*"
+   regexp="n"
+   script="IncrementRound"
+   send_to="12"
+   sequence="100"
+   enabled="y"
+  >
+  </trigger>
+
+  <!-- Death Trigger for Vuln and Round Counter -->
+  <trigger
+   name="VulnDeathTrigger"
+   group="VulnDeath"
+   ignore_case="y"
+   match="* is DEAD, R.I.P."
+   send_to="12"
+   sequence="100"
+   script="OnCreatureDeath"
+   enabled="y"
+  >
+  </trigger>
+</triggers>
+
+<script>
+<![CDATA[
+
+-- Mapping of spell words to vulnerability types
+local spell_to_vuln = {
+  ["afflictus corpus"] = "Phys",
+  ["ardens amictus"] = "Fire",
+  ["aufero fervens"] = "Cold",
+  ["fulmen infractus"] = "Electric",
+  ["ignavus animus"] = "Psionic",
+  ["infirmus respiro"] = "Asphyx",
+  ["macilentus corium"] = "Acid",
+  ["macula valetudo"] = "Poison",
+  ["magus foramen"] = "Magic"
+}
+
+-- Table to store active timer names
+active_timers = active_timers or {}
+timer_counter = timer_counter or 0
+
+function IncrementRound(name, line, wildcards)
+  local current = tonumber(GetVariable("ro")) or 0
+  current = current + 1
+  SetVariable("ro", tostring(current))
+  -- Optional: uncomment to see round updates in real-time
+  -- Note("Round " .. current)
+end
+
+function StartVuln(name, line, wildcards)
+  -- Extract the spell words from the match
+  local spell = string.match(line, "You utter the magic words '([^']+)'")
+  
+  if not spell then
+    return
+  end
+  
+  local vuln_type = spell_to_vuln[spell]
+  
+  if not vuln_type then
+    Note("Unknown vulnerability spell: " .. spell)
+    return
+  end
+  
+  -- Cancel any existing timers for this vulnerability type
+  CancelVulnTimers(vuln_type)
+  
+  -- Announce vulnerability is up
+  DoAfterSpecial(1, "Execute('party say " .. vuln_type .. " Vuln Up')", sendto.script)
+  
+  -- Create a unique timer name
+  timer_counter = timer_counter + 1
+  local timer_name = "vuln_" .. vuln_type .. "_" .. timer_counter
+  
+  -- Create the timer using AddTimer so we can delete it by name
+  AddTimer(
+    timer_name,                           -- timer name
+    0, 0, 27,                             -- hour, minute, second (27 seconds)
+    "AnnounceVulnDown('" .. vuln_type .. "', '" .. timer_name .. "')",  -- send text
+    timer_flag.Enabled + timer_flag.OneShot,  -- flags
+    ""                                    -- script name (empty for inline)
+  )
+  
+  -- Set the timer to send to script
+  SetTimerOption(timer_name, "send_to", "12")
+  
+  -- Store the timer name
+  if not active_timers[vuln_type] then
+    active_timers[vuln_type] = {}
+  end
+  table.insert(active_timers[vuln_type], timer_name)
+  
+  Note("Started " .. vuln_type .. " vulnerability timer (" .. timer_name .. ")")
+end
+
+function AnnounceVulnDown(vuln_type, timer_name)
+  Execute("party say " .. vuln_type .. " Vuln Down")
+  
+  -- Remove this timer from active timers
+  if active_timers[vuln_type] then
+    for i, name in ipairs(active_timers[vuln_type]) do
+      if name == timer_name then
+        table.remove(active_timers[vuln_type], i)
+        break
+      end
+    end
+  end
+end
+
+function CancelVulnTimers(vuln_type)
+  if active_timers[vuln_type] then
+    for _, timer_name in ipairs(active_timers[vuln_type]) do
+      local result = DeleteTimer(timer_name)
+      if result == error_code.eOK then
+        Note("Cancelled timer: " .. timer_name)
+      else
+        Note("Failed to cancel timer: " .. timer_name .. " (code: " .. result .. ")")
+      end
+    end
+    active_timers[vuln_type] = {}
+    Note("Cancelled all " .. vuln_type .. " vulnerability timers")
+  end
+end
+
+function CancelAllVulnTimers()
+  local count = 0
+  for vuln_type, timers in pairs(active_timers) do
+    for _, timer_name in ipairs(timers) do
+      local result = DeleteTimer(timer_name)
+      if result == error_code.eOK then
+        count = count + 1
+      end
+    end
+    active_timers[vuln_type] = {}
+  end
+  if count > 0 then
+    Note("Cancelled " .. count .. " active vulnerability timer(s)")
+  end
+end
+
+function OnCreatureDeath(name, line, wildcards)
+  -- Get round count before resetting
+  local rounds = tonumber(GetVariable("ro")) or 0
+  
+  -- Display round counter
+  if rounds > 0 then
+    Note("This combat was a total of " .. rounds .. " rounds")
+  end
+  
+  -- Reset round counter
+  SetVariable("ro", "0")
+  Note("Round counter reset to zero")
+  
+  -- Always cancel all vulnerability timers on death
+  CancelAllVulnTimers()
+end
+
+function OnPluginInstall()
+  -- Initialize round counter
+  if GetVariable("ro") == nil then
+    SetVariable("ro", "0")
+  end
+  
+  Note("Vulnerability Timer Manager v1.1 loaded")
+  Note("- Round counter initialized")
+  Note("- Vulnerability timers will be cancelled automatically on creature death")
+end
+
+function OnPluginSaveState()
+  -- Save the round counter
+  SetVariable("ro", tostring(GetVariable("ro") or "0"))
+end
+
+]]>
+</script>
+
+</muclient>
